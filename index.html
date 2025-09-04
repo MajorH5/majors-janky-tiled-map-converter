@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>majorh5's janky tiled map converter</title>
+    <link href="./styles.css" rel="stylesheet">
+    </link>
+</head>
+
+<body>
+    <h1>majorh5's janky tiled map converter</h1>
+    <div style="display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 50px;">
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <div style="display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 20px">
+
+                <canvas id="canvas" oncontextmenu="return false;"></canvas>
+                <div style="display: flex; flex-direction: column; align-items: center;">
+                    <canvas id="tilesetCanvas"></canvas>
+                    <div style="display: flex; flex-direction: column;">
+                        <p>
+                            Tileset
+                        </p>
+                        <input type="button" value="Download" id="download"></input>
+                    </div>
+                </div>
+            </div>
+            <div style="display: flex; flex-direction: column;">
+                Mouse-wheel to zoom in/out
+                <br>
+                Hold Space + Left-Click drag to move map
+                <br>
+                Left-Click to inspect a tile
+                
+                <label>Map Image</label>
+                <input type="file" name="sprite" accept="image/png, image/jpeg, image/jpg" id="mapImageInput">
+
+                <div style="display: none;">
+                    <label>Tileset</label>
+                    <input type="file" name="sprite" accept="image/png, image/jpeg, image/jpg" id="tilesetInput">
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+    <!-- <script type="module" src="./index.js"></script> -->
+    <script type="module" src="./test.js"></script>
+</body>
+
+</html>
