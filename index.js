@@ -4,9 +4,6 @@ import { UIImage } from './CanvasUI/components/uiImage.js';
 import { UIText } from './CanvasUI/components/uiText.js';
 import { Vector2 } from './CanvasUI/utils/vector2.js';
 
-import { MapRenderer } from "./tools/mapRenderer.js";
-import { TilesetRenderer } from "./tools/tilesetRenderer.js";
-
 const mapImageInput = document.getElementById("mapImageInput");
 const tilesetInput = document.getElementById("tilesetInput");
 
