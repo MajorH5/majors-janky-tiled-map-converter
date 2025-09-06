@@ -4,38 +4,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>majorh5's janky tiled map converter</title>
+    <title>majorh5's janky Tiled Map Converter</title>
     <link href="./styles.css" rel="stylesheet">
-    </link>
 </head>
 
 <body>
-    <h1>majorh5's janky tiled map converter</h1>
-    <div style="display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 50px;">
-        <div style="display: flex; flex-direction: column; align-items: center;">
-            <div style="display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 20px">
+    <header>
+        <h1>majorh5's janky Tiled Map Converter</h1>
+    </header>
 
-                <canvas id="canvas" oncontextmenu="return false;"></canvas>
-            </div>
-            <div style="display: flex; flex-direction: column;">
-                <p>
-                    Mouse-wheel to zoom in/out
-                </p>
-                <p>
-                    Left-Click drag to move map
-                </p>
-                <p>
-                    Left-Click to inspect a tile
-                </p>
-                <label>Map Image</label>
+    <main class="layout">
+        <!-- Main map panel -->
+        <section class="card">
+            <canvas id="canvas" oncontextmenu="return false;" onscroll=""></canvas>
+            <div class="controls">
+                <p>🖱️ Mouse-wheel to zoom in/out</p>
+                <p>🖱️ Left-Click drag to move map</p>
+                <p>🖱️ Left-Click to inspect a tile</p>
+
+                <label for="mapImageInput">Map Image</label>
                 <input type="file" name="sprite" accept="image/png, image/jpeg, image/jpg" id="mapImageInput">
 
-                <label>Tileset</label>
+                <label for="tilesetInput">Tileset</label>
                 <input type="file" name="sprite" accept="image/png, image/jpeg, image/jpg" id="tilesetInput">
             </div>
+        </section>
+    </main>
 
-        </div>
-    </div>
     <script type="module" src="./index.js"></script>
 </body>
 

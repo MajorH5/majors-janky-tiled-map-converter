@@ -18,7 +18,8 @@ const ui = new CanvasUI(canvas, true);
 const importMessage = new UIText("Please select a map image to import.", {
     size: new Vector2(300, 100),
     pivot: new Vector2(0.5, 0.5),
-    positionScale: new Vector2(0.5, 0.5)
+    positionScale: new Vector2(0.5, 0.5),
+    fontColor: '#cccccc'
 });
 ui.addObject(importMessage);
 
@@ -285,6 +286,7 @@ function onNewMapImported (textureSrc, size, textureName, texture) {
         zIndex: -100,
         borderSize: 2,
         borderColor: '#ff0000',
+        scrollable: true,
     });
 
     const tilesX = size.x / 8;
@@ -306,6 +308,7 @@ function onNewMapImported (textureSrc, size, textureName, texture) {
                 positionScale: new Vector2(x * (8 / size.x), y * (8 / size.y)),
                 fontColor: '#ffffff',
                 fontSize: 8,
+                textTransparency: 0,
                 textXAlignment: 'left',
                 textYAlignment: 'bottom',
                 borderSize: 1,

@@ -1,15 +1,120 @@
-canvas {
-    border: 1px solid black;
-    /* padding: 0;
-    margin: auto;
-    display: block;
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    right: 0; */
+/* Base */
+body {
+  margin: 0;
+  font-family: "Segoe UI", Arial, sans-serif;
+  background-color: #f9f9f9;
+  color: #222;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
 }
 
-p {
-    margin: 5px;
+/* Header */
+header {
+  text-align: center;
+  padding: 20px;
+}
+h1 {
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+/* Layout */
+.layout {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  padding: 20px;
+  gap: 40px;
+}
+
+/* Cards */
+.card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  min-width: 280px;
+}
+
+/* Canvas */
+canvas {
+  border: 1px solid #aaa;
+  background-color: #fff;
+  max-width: 100%;
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+.controls p {
+  margin: 0;
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+/* Inputs & Buttons */
+input,
+button {
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 0.95rem;
+}
+button {
+  cursor: pointer;
+  background: #0078d7;
+  color: white;
+  border: none;
+  transition: background 0.2s ease;
+}
+button:hover {
+  background: #005ea6;
+}
+
+/* Dark mode overrides */
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: #121212;
+    color: #e0e0e0;
+  }
+
+  .card {
+    background-color: #1e1e1e;
+    border: 1px solid #333;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  }
+
+  canvas {
+    border: 1px solid #555;
+    background-color: #2a2a2a; /* subtle fill in dark */
+  }
+
+  input,
+  button {
+    background-color: #2a2a2a;
+    color: #e0e0e0;
+    border: 1px solid #444;
+  }
+
+  input::placeholder {
+    color: #888;
+  }
+
+  button {
+    background: #0a84ff;
+  }
+  button:hover {
+    background: #006edc;
+  }
 }
