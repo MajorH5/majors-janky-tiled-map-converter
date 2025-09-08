@@ -112,8 +112,29 @@ const stackedObjectLayer = createTileLayer("stacked_object", 2);
 
 ui.addObject(tileInspector);
 
+const exportButton = new UIText("Export", {
+    pivot: new Vector2(0.5, 0),
+    positionScale: new Vector2(0.5, 0),
+    position: new Vector2(-200 / 2, 15),
+    size: new Vector2(100, 50),
+    zIndex: 9999,
+    backgroundEnabled: true,
+    backgroundColor: '#ffffff',
+    borderSize: 2,
+    borderColor: '#aaaaaa',
+    clickable: true,
+    visible: false,
+});
+
+exportButton.mouseUp.listen(() => {
+    exportMapToTiled();
+})
+
+ui.addObject(exportButton);
+
 const tilesetData = [];
 let mapTiles = [];
+let mapSize = Vector2.zero;
 
 const CANVAS_WIDTH = 800;
 const CANVAS_HEIGHT = 600;
@@ -224,6 +245,135 @@ function createBlobUrlFromImageData(imageDataArray, width, height) {
     });
 }
 
+function exportMapToTiled () {
+    if (mapSize.magnitude() === 0) {
+        return;
+    }
+    const tiledExport = {};
+    let layerId = 0;
+
+    const createExportLayerObject = (layerType) => {
+        return {
+            "class": layerType,
+            "name": layerType,
+            "data": new Array(mapSize.x * mapSize.y).fill(0),
+            "width": mapSize.x,
+            "height": mapSize.y,
+            "id": layerId++,
+            "opacity": 1,
+            "type": "tilelayer",
+            "visible": true,
+            "x": 0,
+            "y": 0,
+        };
+    };
+
+    const tilesets = [];
+    const createTilesetExportObject = (tileset) => {
+        const lastTileset = tilesets.at(-1);
+        let firstGid = 1;
+
+        if (lastTileset) {
+            firstGid = lastTileset.firstgid + lastTileset.tilecount;
+        }
+
+        const tilesetExport = {
+            "columns": tileset.size.x,
+            "firstgid": firstGid,
+            "imagewidth": tileset.size.x * 8,
+            "imageheight": tileset.size.y * 8,
+            "image": "H:\/unknown_tileset_location\/",
+            "name": tileset.name,
+            "tilecount": tileset.size.x * tileset.size.y,
+            "tileheight": 8,
+            "tilewidth": 8,
+            "margin": 0,
+            "spacing": 0,
+        };
+
+        tilesets.push(tilesetExport);
+
+        return tilesetExport;
+    };
+
+    const localTilesetToExportSet = {};
+
+    const baseTiles = createExportLayerObject("base_tiles");
+    const decorations = createExportLayerObject("decorations");
+    const stackedObjects = createExportLayerObject("stacked_objects");
+
+    const writeTileToLayer = (targetLayer, position, tilesetTile) => {
+        const localTileset = tilesetTile.tileset;
+        let exportTileset = localTilesetToExportSet[localTileset.name];
+
+        if (!exportTileset) {
+            exportTileset = createTilesetExportObject(localTileset);
+            localTilesetToExportSet[localTileset.name] = exportTileset; 
+        }
+
+        const localTileIndex = tilesetTile.index;
+        const exportTileIndex = exportTileset.firstgid + localTileIndex;
+
+        const layerIndex = position.y * mapSize.x + position.x;
+
+        targetLayer.data[layerIndex] = exportTileIndex;
+    };
+
+    for (let i = 0; i < mapTiles.length; i++) {
+        const tile = mapTiles[i];
+        const tilePosition = tile.position;
+
+        if (tile.baseTile) {
+            writeTileToLayer(baseTiles, tilePosition, tile.baseTile);
+        }
+        
+        if (tile.decorationTile) {
+            writeTileToLayer(decorations, tilePosition, tile.decorationTile);
+        }
+        
+        if (tile.stackedObjectTile) {
+            writeTileToLayer(stackedObjects, tilePosition, tile.stackedObjectTile);            
+        }
+    }
+
+    // write layers to map
+    tiledExport["layers"] = [
+        baseTiles,
+        decorations,
+        stackedObjects
+    ];
+
+    // tileset data
+    tiledExport["tilesets"] = tilesets;
+
+    // write map metadata
+    tiledExport["width"] = mapSize.x;
+    tiledExport["height"] = mapSize.y;
+    tiledExport["tilewidth"] = 8;
+    tiledExport["tileheight"] = 8;
+    tiledExport["nextobjectid"] = 9;
+    tiledExport["nextlayerid"] = 9;
+    tiledExport["infinite"] = false;
+    tiledExport["compressionlevel"] = -1;
+    tiledExport["orientation"] = "orthogonal";
+    tiledExport["renderorder"] = "right-down";
+    tiledExport["type"] = "map";
+    tiledExport["tiledversion"] = "1.11.2";
+    tiledExport["version"] = "1.10";
+
+    const resultJSON = JSON.stringify(tiledExport);
+
+    const blob = new Blob([resultJSON], { type: "application/json" });
+
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "exported_map.json";
+
+    link.click();
+
+    URL.revokeObjectURL(link.href);
+}
+
 function updateMapTileIndexData () {
     for (let i = 0; i < mapTiles.length; i++) {
         const tile = mapTiles[i];
@@ -242,6 +392,8 @@ function updateMapTileIndexData () {
 
                     if (tileset.isDecorations) {
                         tile.decorationTile = tilesetTile;
+                    } else if (tilesetTile.isVoxel) {
+                        tile.stackedObjectTile = tilesetTile;
                     } else {
                         tile.baseTile = tilesetTile;
                     }
@@ -260,9 +412,8 @@ function updateMapTileIndexData () {
             const matchedTile = highestMatchedTile.tile;
             const matchedTileset = matchedTile.tileset;
 
-            if (tile.baseTile === null && !matchedTileset.isDecorations) {
+            if (tile.baseTile === null && !matchedTileset.isDecorations && !matchedTile.isVoxel) {
                 // pick the closest?
-
 
                 tile.baseTile = matchedTile;
             }
@@ -355,6 +506,15 @@ function onNewMapImported (textureSrc, size, textureName, texture) {
                     decorationLayer.indexText.text = `Tile Index: None`;
                 }
 
+                if (tile.stackedObjectTile) {
+                    const blobUrl = await createBlobUrlFromImageData(tile.stackedObjectTile.pixelData, 8, 8);
+                    stackedObjectLayer.image.setSrc(blobUrl);
+                    stackedObjectLayer.indexText.text = `Tile Index: ${tile.stackedObjectTile.index}`;
+                } else {
+                    stackedObjectLayer.image.setSrc('');
+                    stackedObjectLayer.indexText.text = `Tile Index: None`;
+                }
+
                 mouse.mouseUp.listenOnce(() => {
                     tileIndicator.backgroundEnabled = false;
                 });
@@ -366,6 +526,7 @@ function onNewMapImported (textureSrc, size, textureName, texture) {
         }
     }
 
+    mapSize = new Vector2(tilesX, tilesY);
     mapTiles = tiles;
     
     mapImage.scrolled.listen((delta, mouse) => {
@@ -408,6 +569,7 @@ function onNewMapImported (textureSrc, size, textureName, texture) {
 
     tilesetDrawer.visible = true;
     tileInspector.visible = true;
+    exportButton.visible = true;
     importMessage.visible = false;
 
     updateMapTileIndexData();
@@ -430,7 +592,8 @@ function onNewTilesetImported (textureSrc, size, textureName, texture) {
         name: textureName,
         id: tilesetId,
         tiles: tiles,
-        isDecorations
+        isDecorations,
+        size: new Vector2(tilesX, tilesY)
     };
 
     for (let y = 0; y < tilesY; y++) {
