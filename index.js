@@ -282,7 +282,7 @@ function exportMapToTiled () {
             "firstgid": firstGid,
             "imagewidth": tileset.size.x * 8,
             "imageheight": tileset.size.y * 8,
-            "image": "H:\/unknown_tileset_location\/",
+            "image": `H:\/${tileset.name}\/`,
             "name": tileset.name,
             "tilecount": tileset.size.x * tileset.size.y,
             "tileheight": 8,
@@ -301,6 +301,7 @@ function exportMapToTiled () {
     const baseTiles = createExportLayerObject("base_tiles");
     const decorations = createExportLayerObject("decorations");
     const stackedObjects = createExportLayerObject("stacked_objects");
+    const SOvisuals = createExportLayerObject("SO_visuals");
 
     const writeTileToLayer = (targetLayer, position, tilesetTile) => {
         const localTileset = tilesetTile.tileset;
@@ -316,7 +317,9 @@ function exportMapToTiled () {
 
         const layerIndex = position.y * mapSize.x + position.x;
 
-        targetLayer.data[layerIndex] = exportTileIndex;
+        if (layerIndex >= 0 && layerIndex < targetLayer.data.length - 1) {
+            targetLayer.data[layerIndex] = exportTileIndex;
+        }
     };
 
     for (let i = 0; i < mapTiles.length; i++) {
@@ -333,6 +336,29 @@ function exportMapToTiled () {
         
         if (tile.stackedObjectTile) {
             writeTileToLayer(stackedObjects, tilePosition, tile.stackedObjectTile);            
+            
+            // assume height of 1
+            const tileset = tile.stackedObjectTile.tileset;
+
+            const SOPosition = tile.stackedObjectTile.position;
+
+            const baseVoxelTile = tileset.tiles.find((tile) => {
+                return tile.position.x === SOPosition.x + 1 &&
+                    tile.position.y === SOPosition.y;
+            });
+            const topVoxelTile = tileset.tiles.find((tile) => {
+                return tile.position.x === SOPosition.x + 1 &&
+                    tile.position.y === SOPosition.y - 1;
+            });
+
+            if (baseVoxelTile) {
+                writeTileToLayer(SOvisuals, tilePosition, baseVoxelTile);
+            }
+
+            if (topVoxelTile) {
+                const offset = new Vector2(0, -1);
+                writeTileToLayer(SOvisuals, tilePosition.add(offset), topVoxelTile);
+            }
         }
     }
 
@@ -340,7 +366,8 @@ function exportMapToTiled () {
     tiledExport["layers"] = [
         baseTiles,
         decorations,
-        stackedObjects
+        stackedObjects,
+        SOvisuals,
     ];
 
     // tileset data
@@ -379,6 +406,7 @@ function updateMapTileIndexData () {
         const tile = mapTiles[i];
         
         let highestMatchedTile = null;
+        let fullMatchFound = false;
         
         for (let j = 0; j < tilesetData.length; j++){
             const tileset = tilesetData[j];
@@ -388,17 +416,36 @@ function updateMapTileIndexData () {
                 const matchPercentage = comparePixelData(tilesetTile.pixelData, tile.pixelData, tileset.isDecorations);
                 
                 if (matchPercentage === 1) {
+                    fullMatchFound = true;
+
                     tile.indicator.text = `${tileset.id}|${tilesetTile.index}`
 
                     if (tileset.isDecorations) {
                         tile.decorationTile = tilesetTile;
                     } else if (tilesetTile.isVoxel) {
-                        tile.stackedObjectTile = tilesetTile;
-                    } else {
+                        tile.stackedObjectTile = tileset.tiles[k - 1];
+                    } else if (!tilesetTile.ignored) {
                         tile.baseTile = tilesetTile;
+                    } else {
+                        // probably part of voxel top, assume
+                        // bottom to be voxel
+                        const bottomTileIndex = tile.index + mapSize.x;
+                        const bottomTile = mapTiles.find((searchTile) => {
+                            return searchTile.index === bottomTileIndex;
+                        });
+
+                        const SOTile = tileset.tiles.find((searchTile) => {
+                            return searchTile.position.x === tilesetTile.position.x - 1 &&
+                                searchTile.position.y === tilesetTile.position.y + 1;
+                        });
+
+                        if (bottomTile && SOTile) {
+                            bottomTile.stackedObjectTile = SOTile;
+                        }
                     }
 
                     highestMatchedTile = null;
+                    break;
                 } else if (highestMatchedTile === null || matchPercentage > highestMatchedTile.percentage) {
                     highestMatchedTile = {
                         tile: tilesetTile,
@@ -406,13 +453,17 @@ function updateMapTileIndexData () {
                     };
                 }
             }
+
+            if (fullMatchFound) {
+                break;
+            }
         }
 
         if (highestMatchedTile !== null && highestMatchedTile.percentage > 0.1) {
             const matchedTile = highestMatchedTile.tile;
             const matchedTileset = matchedTile.tileset;
 
-            if (tile.baseTile === null && !matchedTileset.isDecorations && !matchedTile.isVoxel) {
+            if (tile.baseTile === null && !matchedTileset.isDecorations && !matchedTile.isVoxel && !matchedTile.ignored) {
                 // pick the closest?
 
                 tile.baseTile = matchedTile;
@@ -445,7 +496,7 @@ function onNewMapImported (textureSrc, size, textureName, texture) {
     for (let y = 0; y < tilesY; y++) {
         for (let x = 0; x < tilesX; x++) {
             const tilePixelData = readPartialImageData(texture, x * 8, y * 8, 8, 8);
-            const index = y * 8 + x;
+            const index = y * tilesX + x;
 
             if (isEmptyPixelData(tilePixelData)) {
                 continue;
@@ -611,6 +662,7 @@ function onNewTilesetImported (textureSrc, size, textureName, texture) {
                 index: index,
                 pixelData: tilePixelData,
                 isVoxel: false,
+                ignored: false,
                 tileset: tilesetObj
             };
 
@@ -619,6 +671,14 @@ function onNewTilesetImported (textureSrc, size, textureName, texture) {
                     tile.isVoxel = true;
 
                     // should we ignore top tile? not sure? height can be zero
+                    const topTile = tiles.find((searchTile) => {
+                        return searchTile.position.x == x &&
+                            searchTile.position.y == y - 1
+                    });
+
+                    if (topTile) {
+                        topTile.ignored = true;
+                    }
                 }
             }
             
