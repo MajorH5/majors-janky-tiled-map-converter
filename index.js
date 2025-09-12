@@ -326,8 +326,8 @@ function exportMapToTiled () {
         const tile = mapTiles[i];
         const tilePosition = tile.position;
 
-        if (tile.baseTile) {
-            writeTileToLayer(baseTiles, tilePosition, tile.baseTile);
+        if (tile.baseTile || tile.predictedBaseTile) {
+            writeTileToLayer(baseTiles, tilePosition, tile.baseTile || tile.predictedBaseTile);
         }
         
         if (tile.decorationTile) {
@@ -402,6 +402,7 @@ function exportMapToTiled () {
 }
 
 function updateMapTileIndexData () {
+    // first pass
     for (let i = 0; i < mapTiles.length; i++) {
         const tile = mapTiles[i];
         
@@ -413,8 +414,30 @@ function updateMapTileIndexData () {
             
             for (let k = 0; k < tileset.tiles.length; k++) {
                 const tilesetTile = tileset.tiles[k];
-                const matchPercentage = comparePixelData(tilesetTile.pixelData, tile.pixelData, tileset.isDecorations);
+                let matchPercentage = comparePixelData(tilesetTile.pixelData, tile.pixelData, tileset.isDecorations);
                 
+                if (tilesetTile.isVoxel) {
+                    const topTilesetTile = tileset.tiles.find((tile) => {
+                        return tile.position.x === tilesetTile.position.x &&
+                            tile.position.y === tilesetTile.position.y - 1
+                    });
+
+                    const topMapTile = mapTiles.find((searchTile) => {
+                        return searchTile.position.x === tile.position.x &&
+                            searchTile.position.y === tile.position.y - 1;
+                    });
+
+                    if (topTilesetTile && topMapTile) {
+                        const topMatchPercentage = comparePixelData(topTilesetTile.pixelData, topMapTile.pixelData);
+
+                        if (topMatchPercentage !== 1) {
+                            // could be diff voxel texture same base?
+                            // in reality we should be doing by height not 1 tile above
+                            matchPercentage = 0;
+                        }
+                    }
+                }
+
                 if (matchPercentage === 1) {
                     fullMatchFound = true;
 
@@ -470,6 +493,89 @@ function updateMapTileIndexData () {
             }
         }
     }
+
+    // second pass for missing tile data
+    // here we just gotta assume what tile
+    // could've been there based on surroundings
+    for (let i = 0; i < mapTiles.length; i++) {
+        const tile = mapTiles[i];
+        const index = tile.index;
+
+        if (tile.baseTile) {
+            continue;
+        }
+
+        const neighbors = ([
+            mapTiles.find((tile) => tile.index === index - 1), // left
+            mapTiles.find((tile) => tile.index === index + 1), // right
+            mapTiles.find((tile) => tile.index === index - mapSize.x), // top
+            mapTiles.find((tile) => tile.index === index + mapSize.x), // bottom
+        ]).filter(((value) => value?.baseTile));
+
+        if (neighbors.length === 0) {
+            // no information to infer this tile
+            continue;
+        }
+
+        const liquidTile = neighbors.find((tile) => tile.baseTile?.isLiquid);
+        let presumedBaseTile = null;
+
+        if (liquidTile && !tile.stackedObjectTile) {
+            // prioritize picking liquid tiles
+            presumedBaseTile = liquidTile.baseTile;
+        } else {
+            const weights = [];
+            const uniqueBaseTiles = [];
+
+            let mostCommonTile = null;
+            let mostCommonOcurrances = -1;
+            
+            for (let j = 0; j < neighbors.length; j++) {
+                const neighbor = neighbors[j];
+                let existingIndex = uniqueBaseTiles.findIndex((tile) => neighbor.baseTile === tile);
+                
+                if (existingIndex !== -1) {
+                    weights[existingIndex]++;
+                } else {
+                    existingIndex = weights.length;
+
+                    weights[existingIndex] = 1;
+                    uniqueBaseTiles[existingIndex] = neighbor.baseTile;
+                }
+
+                const occurances = weights[existingIndex];
+
+                if (occurances > mostCommonOcurrances) {
+                    mostCommonOcurrances = occurances;
+                    mostCommonTile = neighbor.baseTile;
+                }
+            }
+
+            presumedBaseTile = mostCommonTile;
+
+            // weighted random?
+            // const total = weights.reduce((a, b) => a + b, 0);
+            // const r = Math.random() * total;
+            // const acc = 0;
+
+            // for (let k = 0; k < uniqueBaseTiles.length; k++) {
+            //     acc += weights[k];
+
+            //     if (r < acc) {
+            //         presumedBaseTile = uniqueBaseTiles[k];
+            //         break;
+            //     }
+            // }
+
+            if (!presumedBaseTile) {
+                console.log(neighbors)
+                throw new Error("Failed to predict base tile!");
+            }
+            
+            tile.predictedBaseTile = presumedBaseTile;
+        }
+
+    }
 }
 
 function onNewMapImported (textureSrc, size, textureName, texture) {    
@@ -521,6 +627,7 @@ function onNewMapImported (textureSrc, size, textureName, texture) {
                 pixelData: tilePixelData,
                 indicator: tileIndicator,
 
+                predictedBaseTile: null,
                 baseTile: null,
                 decorationTile: null,
                 stackedObjectTile: null,
@@ -539,10 +646,12 @@ function onNewMapImported (textureSrc, size, textureName, texture) {
                 
                 tileIndicator.backgroundEnabled = true;
 
-                if (tile.baseTile) {
-                    const blobUrl = await createBlobUrlFromImageData(tile.baseTile.pixelData, 8, 8);
+                const baseTile = tile.baseTile || tile.predictedBaseTile;
+
+                if (baseTile) {
+                    const blobUrl = await createBlobUrlFromImageData(baseTile.pixelData, 8, 8);
                     baseTileLayer.image.setSrc(blobUrl);
-                    baseTileLayer.indexText.text = `Tile Index: ${tile.baseTile.index}`;
+                    baseTileLayer.indexText.text = `Tile Index: ${baseTile.index}`;
                 } else {
                     baseTileLayer.image.setSrc('');
                     baseTileLayer.indexText.text = `Tile Index: None`;
