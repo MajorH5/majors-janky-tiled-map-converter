@@ -650,7 +650,7 @@ function onNewTilesetImported (textureSrc, size, textureName, texture) {
     for (let y = 0; y < tilesY; y++) {
         for (let x = 0; x < tilesX; x++) {
             const tilePixelData = readPartialImageData(texture, x * 8, y * 8, 8, 8);
-            const index = y * 8 + x;
+            const index = y * tilesX + x;
 
             if (isEmptyPixelData(tilePixelData)) {
                 continue;
