@@ -245,7 +245,7 @@ function createBlobUrlFromImageData(imageDataArray, width, height) {
     });
 }
 
-function exportMapToTiled () {
+async function exportMapToTiled () {
     if (mapSize.magnitude() === 0) {
         return;
     }
@@ -392,13 +392,31 @@ function exportMapToTiled () {
 
     const blob = new Blob([resultJSON], { type: "application/json" });
 
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "exported_map.json";
+    try {
+        // Use File System Access API to show save dialog
+        const fileHandle = await window.showSaveFilePicker({
+            suggestedName: 'exported_map.json',
+            types: [{
+                description: 'JSON Files',
+                accept: { 'application/json': ['.json'] }
+            }]
+        });
 
-    link.click();
-
-    URL.revokeObjectURL(link.href);
+        const writable = await fileHandle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+    } catch (err) {
+        // User cancelled or API not supported, fallback to download
+        if (err.name !== 'AbortError') {
+            console.warn('File System Access API not supported, using fallback download');
+        }
+        
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "exported_map.json";
+        link.click();
+        URL.revokeObjectURL(link.href);
+    }
 }
 
 function updateMapTileIndexData () {
