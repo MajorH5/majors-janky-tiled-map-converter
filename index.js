@@ -298,12 +298,28 @@ async function exportMapToTiled () {
         return tilesetExport;
     };
 
+    const createObjectLayerExportObject = (layerType) => {
+        return {
+            "class": layerType,
+            "draworder":"topdown",
+            "name": layerType,
+            "objects":[],
+            "opacity":1,
+            "type":"objectgroup",
+            "visible":true,
+            "x":0,
+            "y":0
+        }
+    };
+
     const localTilesetToExportSet = {};
 
     const baseTiles = createExportLayerObject("base_tiles");
     const decorations = createExportLayerObject("decorations");
     const stackedObjects = createExportLayerObject("stacked_objects");
     const SOvisuals = createExportLayerObject("SO_visuals");
+    const gameObjects = createObjectLayerExportObject("gameobjects");
+    const regions = createObjectLayerExportObject("regions");
 
     const writeTileToLayer = (targetLayer, position, tilesetTile) => {
         const localTileset = tilesetTile.tileset;
@@ -366,6 +382,8 @@ async function exportMapToTiled () {
 
     // write layers to map
     tiledExport["layers"] = [
+        gameObjects,
+        regions,
         baseTiles,
         decorations,
         stackedObjects,
