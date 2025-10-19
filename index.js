@@ -382,12 +382,12 @@ async function exportMapToTiled () {
 
     // write layers to map
     tiledExport["layers"] = [
-        gameObjects,
-        regions,
         baseTiles,
         decorations,
         stackedObjects,
         SOvisuals,
+        regions,
+        gameObjects,
     ];
 
     // tileset data
