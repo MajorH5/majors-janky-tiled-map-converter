@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>majorh5's janky Tiled Map Converter</title>
     <link href="./styles.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 
 <body>
@@ -22,11 +23,34 @@
                 <p>🖱️ Left-Click drag to move map</p>
                 <p>🖱️ Left-Click to inspect a tile</p>
 
-                <label for="mapImageInput">Map Image</label>
+                <label for="mapImageInput">Map Image (Single)</label>
                 <input type="file" name="sprite" accept="image/png, image/jpeg, image/jpg" id="mapImageInput">
 
-                <label for="tilesetInput">Tileset</label>
+                <label for="tilesetInput">Tileset (Single)</label>
                 <input type="file" name="sprite" accept="image/png, image/jpeg, image/jpg" id="tilesetInput">
+                
+                <div id="tilesetPathOverride" style="display: none; margin-top: 10px;">
+                    <label for="tilesetPathInput">Tileset Image Path (optional, leave empty to use filename):</label>
+                    <input type="text" id="tilesetPathInput" placeholder="e.g., C:/path/to/tileset.png" style="width: 100%; margin-top: 5px;">
+                    <small style="display: block; margin-top: 5px; opacity: 0.7;">Override the image path used in exported JSON files</small>
+                </div>
+            </div>
+        </section>
+
+        <!-- Bulk processing panel -->
+        <section class="card">
+            <h2>Bulk Processing</h2>
+            <div class="controls">
+                <label for="bulkMapInput">Map Images (Bulk)</label>
+                <input type="file" name="bulkMaps" accept="image/png, image/jpeg, image/jpg" id="bulkMapInput" multiple>
+                <div id="mapFileList" class="file-list"></div>
+
+                <label for="bulkTilesetInput">Tilesets (Bulk)</label>
+                <input type="file" name="bulkTilesets" accept="image/png, image/jpeg, image/jpg" id="bulkTilesetInput" multiple>
+                <div id="tilesetFileList" class="file-list"></div>
+
+                <button id="bulkProcessButton" class="bulk-button" disabled>Process All Maps</button>
+                <div id="bulkStatus" class="status-message"></div>
             </div>
         </section>
     </main>
